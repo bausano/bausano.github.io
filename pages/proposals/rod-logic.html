@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="ie=edge">
+  <title>The Syllabus | We Are What We Read</title>
+  <link rel="stylesheet" href="/assets/css/app.css">
+  <link rel="shortcut icon" type="image/gif" href="/assets/images/favicon.gif"/>
+</head>
+<body>
+  <main class="main">
+    <header class="header">
+      <h1 class="title">
+        Electromechanical computer with rod logic
+      </h1>
+      <h2 class="subtitle">Project proposal by Michael Bausano</h2>
+    </header>
+
+    <section>
+      <h3>Motivation</h3>
+      <p>
+        I have read [1] on HackerNews portal which led me to Eric Drexler's [2].
+        While I lack the background to validate the first part of E. Drexler's
+        thesis where he draws how could an electromechanical machine using rod
+        logic be built on a nanoscale, I became very interested in chapter 11.
+        Nanomechanical computational systems. Besides drawing plans for
+        different rod logic circuits, I have also designed a simple compact rod
+        logic housing prototype in dimensions of 20cm x 20cm x 15cm. It has 11
+        levels and accommodates up to 34 rods per level. These numbers were
+        initially chosen to build a 6-bit adder.
+      </p>
+
+      <h3>Gates and circuits</h3>
+      <p>
+        I am interested in how could logic gates and circuits be positioned with
+        respect to their inputs and outputs. I would like to develop a syntax
+        for expressing these nuances and explore how could 3rd dimension save on
+        space or increase fan-out of a gate or circuit.
+      </p>
+
+      <p>
+        Forming an instruction set and then explaining how could it be
+        implemented and what processes could be borrowed by analogy from
+        electrical CPUs is essential should I try to build a universal machine.
+      </p>
+
+      <h3>Clocking</h3>
+      <p>
+        The idea of a driver on one end with a spring on the other simplifies
+        the issue of rod synchronization. I hope to define assumptions that
+        can be made based on this design such as when is it desirable to reset
+        rods in parallel, in what order should the rods be pushed and released,
+        how does a structure error propagate through the model and so on.
+      </p>
+
+      <p>
+        I would also concentrate on clocked oscillators and their possible use
+        for collecting outputs and storing them into registers.
+      </p>
+
+      <h3>Turing machine</h3>
+      <p>
+        Besides goals touched above, I strive to redesign my prototype based on
+        my research and scale it down from centimeters to millimeters. Once I
+        had models in smaller dimensions, I could implement the instruction set
+        I would have proposed. If I succeeded with these experiments, ultimately
+        I would aim to implement the abstraction of a programmable Turing
+        a-machine described in [3].
+      </p>
+
+      <h3>References</h3>
+      <ol>
+        <li>
+          <a href="http://www.halfbakedmaker.org/blog/58">http://www.halfbakedmaker.org/blog/58</a>
+        </li>
+        <li>
+          <a href="http://dspace.mit.edu/handle/1721.1/27999">http://dspace.mit.edu/handle/1721.1/27999</a>
+        </li>
+        <li>
+          <a href="https://www.cs.virginia.edu/~robins/Turing_Paper_1936.pdf">https://www.cs.virginia.edu/~robins/Turing_Paper_1936.pdf</a>
+        </li>
+      </ol>
+
+    </section>
+
+    <footer class="footer">
+      <p class="signature">
+        Go back to <a href="/">the homepage</a>.
+      </p>
+    </footer>
+  </main>
+</body>
+</html>
