@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="ie=edge">
+  <title>The Syllabus | We Are What We Read</title>
+  <link rel="stylesheet" href="/assets/css/app.css">
+  <link rel="shortcut icon" type="image/gif" href="/assets/images/favicon.gif"/>
+</head>
+<body>
+  <main class="main">
+    <header class="header">
+      <h1 class="title">
+        Async fault tolerant ML framework for workload balancing
+      </h1>
+      <h2 class="subtitle">Project proposal by Michael Bausano</h2>
+    </header>
+
+    <section>
+      <h3>Motivation</h3>
+      <p>
+        I propose a framework for processing large datasets used to train
+        machine learning functions or form knowledge databases. Its asynchronous
+        architecture is well scalable on both axes in all subparts.
+        To illustrate different points, two use cases are presented along with
+        this framework. Each subsystem described then has an abstract definition
+        and a short example of how it applies to both use cases.
+      </p>
+
+      <h3>Background</h3>
+      <p>
+        This framework gives machine learning experts a tool to quickly
+        bootstrap their environment. They can focus on working on the data
+        rather than fault tolerance and concurrency of their system, while still
+        being in control of the flow. This framework consists of an AWS Cloud
+        Formation script that creates the stack and uploads the codebase. It has
+        a master that overlooks the whole system and workers in different
+        factories that report to master. It has two major storage units. One
+        checks and indexes the input data based on model requirements. The
+        second one is the resulting knowledge base or trained function. This
+        framework supports multiple types of storage units, such as graph
+        databases, relational databases, or S3. Most of the features (such as
+        the first storage unit) are optional and the FW user can implement them
+        if they feel it fits their use case.
+      </p>
+
+      <h3>Use cases</h3>
+      <p>
+        Following use cases will be described at each stage to illuminate how
+        the framework works:
+      </p>
+
+      <i>User's track playlist analysis</i>
+      <p>
+        By analyzing the listening habits of a user, we can offer great
+        suggestions of songs they have not heard yet but will most likely enjoy.
+        We can do this by using APIs of streaming services such as Spotify to
+        gather data. Then we build graphs from these songs.
+      </p>
+
+      <i>Labelling a song's genre</i>
+      <p>
+        Using Spotify APIs, we can analyse the different musical properties of
+        each song. Each song comes labelled. We can use this to train a neural
+        network to guess a song's genre.
+      </p>
+
+      <h3>Master</h3>
+      <p>
+        Master has two modules. The first one scales each section depending on
+        the needs to ensure there are no resources wasted or lacking. It looks
+        for issues in each section by analyzing how often each instance outputs,
+        how much dead letter queue waste it produces, etc. It crafts reports
+        that are sent to the FW user.
+      </p>
+
+      <p>
+        The second module synchronizes merging the data to the master database,
+        which should be done in larger chunks.
+      </p>
+
+      <h3>Factories</h3>
+      <p>
+        Factories are clusters of workers with the same purpose which poll the
+        input queue and push their output to an output queue that is controlled
+        by the master.
+      </p>
+
+      <h3>Flow</h3>
+      <p>
+        The flow starts with an SQS to which data preprocessing crawlers push
+        data. The SQS optionally linked to gatekeeper workers. These scripts can
+        have several use cases such as validating the data, discarding duplicates,
+        and routing the data to a correct processing instance. Routing the data
+        could be used in a way that there's only one input into the stack which
+        trains many different models at once. At this point, the FW user
+        provides us with a single gatekeeper script for each stage (0-n stages)
+        and the FW makes sure the workers are properly scaled based on the load.
+      </p>
+
+      <p>
+        The processing instances will work on received data and then commit them.
+        In our graph example, it is not necessary to have a copy of the master
+        database at this point. However for many machine learning algorithms,
+        one wants to have the latest weights and train the function with those
+        weights set as initial. Therefore the processing instance may request a
+        replica of the master database.
+      </p>
+
+      <p>
+        Once the data is processed or it receives a sync command from the master,
+        every relevant worker commits the results to the last stage, where the
+        results from each processing instance are merged with together and with
+        the master database. Then it, optionally, goes through a fitness test
+        and is committed as the new head of the master data. This new head is
+        updated in all relevant processing instances.
+      </p>
+
+      <h3>Requirements</h3>
+      <ol>
+        <li>
+          Adapters for popular cloud services
+        </li>
+        <li>
+          Fault tolerance based on queues and master oracle
+        </li>
+        <li>
+          Broad and well-documented settings that is changeable without downtime
+        </li>
+        <li>
+          Support of several popular programming languages for each script (Gatekeeper, processing instance and merger)
+        </li>
+        <li>
+          Admin panel with reports and controls
+        </li>
+        <li>
+          Updates of the master script without downtime
+        </li>
+        <li>
+          SQS (and its relevant alternatives on other cloud platforms) should be replaceable by a service that can enqueue big amount of data (maybe use SQS only as a pointer and upload the data into S3, which brings some possible concurrency races that have to be taken care of)
+        </li>
+        <li>
+          Easy deployment
+        </li>
+        <li>
+          Fitness tests before committing changes to master database
+        </li>
+        <li>
+          Versioning of the master database
+        </li>
+        <li>
+          Optimized for cost-efficiency
+        </li>
+      </ol>
+
+    </section>
+
+    <footer class="footer">
+      <p class="signature">
+        Go back to <a href="/">the homepage</a>.
+      </p>
+    </footer>
+  </main>
+</body>
+</html>
