@@ -32,6 +32,14 @@
   content: '\25b6';
 }
 
+.has-topic.is-podcast::after {
+  content: '\01F399';
+}
+
+.has-topic.is-book::after {
+  content: '\01F4D6';
+}
+
 .articles .article time {
   color: grey;
   display: block;
