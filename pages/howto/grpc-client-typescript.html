@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>The Syllabus | We Are What We Read</title>
+    <link rel="stylesheet" href="/assets/css/app.css">
+    <link rel="shortcut icon" type="image/gif" href="/assets/images/favicon.gif"/>
+  </head>
+
+  <body>
+    <main class="main">
+      <header class="header">
+        <h1 class="title">
+          gRPC Client in Typescript
+        </h1>
+        <h2 class="subtitle">Workaround by Michael Bausano</h2>
+      </header>
+
+      <section>
+        <h3>Motivation</h3>
+
+        <p>
+          I have a running gRPC server for which I build an
+          <a href="https://www.electronjs.org">Electron</a> debugger.
+
+          I have to invest a lot of effort into making auto generated files work
+          with type system. In this document I present my findings and I
+          implement a workaround rather than a real solution. If you have a
+          better solution please do contact
+          <a href="https://github.com/bausano">me</a>.
+        </p>
+
+        <p>
+          It is important to note that I focus NodeJS and this approach will not
+          work if you want to run a gRPC client in a browser. To run it in
+          browser, you want to use
+          <a href="https://github.com/grpc/grpc-web">grpc-web</a>. I find
+          <a href="https://stackoverflow.com/questions/58247650/how-to-use-typescript-protobuf-generated-files-in-a-grpc-angular-application">
+            this SO question
+          </a> quite informative for the web.
+        </p>
+
+        <h3>Dependencies</h3>
+
+        <p>
+          I have two production dependencies installed which we install with
+          the following command:
+
+          <pre>
+            npm i  --save grpc @grpc/proto-loader
+          </pre>
+        </p>
+
+        <ul>
+          <li>
+            <a href="https://www.npmjs.com/package/grpc">
+              gRPC node
+            </a>
+            is gRPC standard implementation.
+
+            <pre>
+              "grpc": "^1.24.2"
+            </pre>
+          </li>
+          <li>
+            <a href="https://www.npmjs.com/package/@grpc/proto-loader">
+              Proto loader
+            </a>
+            loads our <em>.proto</em> file for the <em>grpc</em> library.
+
+            <pre>
+              "@grpc/proto-loader": "^0.5.3"
+            </pre>
+          </li>
+        </ul>
+
+        <p>
+          And 2 dev dependencies which we install with this command:
+
+          <pre>
+            npm i --save-dev protoc ts-protoc-gen
+          </pre>
+        </p>
+
+        <ul>
+          <li>
+            <a href="https://www.npmjs.com/package/protoc">
+              Protoc binary
+            </a>
+            which auto generates the JS files.
+
+            <pre>
+              "protoc": "^1.0.4"
+            </pre>
+          </li>
+          <li>
+            <a href="https://www.npmjs.com/package/ts-protoc-gen">
+              TS protoc plugin
+            </a>
+            which generates the TS type files.
+
+            <pre>
+              "ts-protoc-gen": "^0.12.0"
+            </pre>
+          </li>
+        </ul>
+
+        <h3>Build file</h3>
+
+        <p>
+          I've written a <em>bin/gen_proto.sh</em> script which I run on build
+          that generates the types and message objects. It works with the dev
+          dependencies we've introduced above. It generates the output into a
+          <em>proto</em> directory in the root of the project, which I
+          <em>.gitignore</em>d.
+        </p>
+
+        <pre>
+          #!/bin/bash
+
+          # This script is used by the `npm run proto` command to generate types and
+          # definitions from a proto file.
+
+          # Path to the plugin which generates JS and TS.
+          PLUGIN="./node_modules/.bin/protoc-gen-ts"
+
+          # Points to the submodule which contains proto files.
+          PROTO_FILES="./services"
+
+          # Path to the generates files. This directory is .gitignore'd.
+          OUT_DIR="./proto"
+
+          echo "Building proto files in ${PROTO_FILES} into ${OUT_DIR} directory."
+
+          # Makes the output path if it doesn't exist.
+          mkdir -p "${OUT_DIR}"
+
+          # Uses the plugin installed by `ts-protoc-gen` npm package.
+          # See https://github.com/protocolbuffers/protobuf/tree/master/js#commonjs-imports
+          # for other import style options.
+          protoc --plugin=protoc-gen-ts="${PLUGIN}"               \
+            --js_out=import_style=commonjs,binary:"${OUT_DIR}"    \
+            --ts_out="service=grpc-node:${OUT_DIR}"               \
+            -I "${PROTO_FILES}"                                   \
+            ./"${PROTO_FILES}"/*.proto
+        </pre>
+
+        <h3>Declaring the service endpoints for grpc lib</h3>
+
+        <p>
+          I couldn't get the types to load properly. What follows is a
+          workaround as I am sure there must be a better way of doing this. On
+          the other hand it is not completely hideous and it works.
+        </p>
+
+        <pre>
+          import { ChannelCredentials, GrpcObject } from 'grpc'
+          // From the src folder, point this to the proto dir with the
+          // auto generated files.
+          import {
+            MyServiceClient as MyServiceClientProto,
+          } from '../proto/my_service_grpc_pb'
+
+          /**
+           * We extend the grpc library with the auto generated types.
+           */
+          declare module 'grpc' {
+            interface MyServiceClientConstructable {
+              /**
+               * A workaround for compiler issue which doesn't recognize the
+               * exported type to be instantiable.
+               */
+              new (addr: string, tls: ChannelCredentials, opt?: object)
+            }
+
+            /**
+             * Reexports the generated client type.
+             */
+            type MyServiceClient = MyServiceClientProto & MyServiceClientConstructable
+
+            interface GrpcObject {
+              /**
+               * We will see later on that the gRPC object that is loaded by
+               * the @grpc/proto-loader exports a properly that is equal to the
+               * package name in the .proto file.
+               */
+              my_service?: {
+                /**
+                 * The client exported by the .proto package.
+                 */
+                MyService: MyServiceClient,
+              }
+            }
+          }
+        </pre>
+
+      </section>
+
+      <h3>Usage</h3>
+
+      <p>
+        Let's assume that the service exports an endpoint <em>HelloWorld</em>
+        which accepts <em>Person</em> message.
+      </p>
+
+      <p>
+        We need to load the proto definitions from a file and then load them.
+      </p>
+
+      <pre>
+        import { loadPackageDefinition, GrpcObject } from 'grpc'
+        import { loadSync as parseProto, PackageDefinition } from '@grpc/proto-loader'
+
+        const MY_SERVICE_PROTO_PATH: string = `path/to/proto/my_service.proto`
+        // Compiles the proto file and returns a definition object.
+
+        const myServiceDefinition: PackageDefinition
+          = parseProto(MY_SERVICE_PROTO_PATH)
+
+        // The grpc lib uses this definitions to return a new instance of the
+        // my_service package which includes the MyService service.
+        const { my_service }: GrpcObject =
+          loadPackageDefinition(myServiceDefinition)
+      </pre>
+
+      <p>
+        Then we instantiate the service client. The tls settings as well as
+        the configuration is out of the scope of this document (read
+        "I haven't bothered with it").
+      </p>
+
+      <pre>
+        // Here's where our declaration comes to play. We can now export the
+        // service client type.
+        import { credentials, ChannelCredentials, MyServiceClient } from 'grpc'
+
+        const addr: string = '127.0.0.1:50051'
+        const tls: ChannelCredentials = credentials.createInsecure()
+        const client: MyServiceClient = new my_service.MyServiceClient(addr, tls)
+      </pre>
+
+      <p>
+        I'd also recommend having a reexport of the message types in a file in
+        the source directory. In the file where we declare the extension to
+        the grpc service, let's say <em>grpcExt.ts</em> we can contain all paths
+        to the proto folder.
+      </p>
+
+      <pre>
+        export * from '../proto/my_service_pb'
+      </pre>
+
+      <p>
+        We have all pieces together to send a message.
+      </p>
+
+      <pre>
+        import { Person } from './grpcExt'
+
+        // Assume that there's a message Person with name property.
+        const person: Person = new Person()
+        person.setName('Katja')
+
+        // We have defined client earlier.
+        client.helloWorld(person, (err, response) => {
+          // Do the stuff that needs to be done.
+        })
+      </pre>
+
+      <h3>Relevant links</h3>
+
+      <ul>
+        <li>
+          <a href="https://medium.com/attest-engineering/fully-typed-typescript-api-consuming-grpc-and-graphql-5d5ae6b33bf1">
+            Creating a TypeScript API that consumes gRPC and GraphQL via
+            generated types
+          </a>
+        </li>
+        <li>
+          <a href="https://tomasalabes.me/blog/nodejs/grpc/typescript/2018/07/07/typing-grpc.html">
+            Typing gRPC with Node & Typescript
+          </a>
+        </li>
+        <li>
+          Alternatively, you can use the
+          <a href="https://www.npmjs.com/package/google-protobuf">
+            google-protobuf
+          </a>
+          library. Great place to start is
+          <a href="https://adnanahmed.info/blog/2019/11/01/grpc-with-nodejs-typescript">
+            this blog post
+          </a>
+          and
+          <a href="https://github.com/agreatfool/grpc_tools_node_protoc_ts">
+            this repository.
+          </a>
+        </li>
+      </ul>
+
+      <footer class="footer">
+        <p class="signature">
+          Go back to <a href="/">the homepage</a>.
+        </p>
+      </footer>
+    </main>
+  </body>
+</html>
