@@ -15,38 +15,49 @@
         <h1 class="title">
           gRPC Client in Typescript
         </h1>
-        <h2 class="subtitle">Workaround by Michael Bausano</h2>
+        <h2 class="subtitle">... a workaround for issues with types</h2>
       </header>
 
       <section>
         <h3>Motivation</h3>
 
         <p>
-          I have a running gRPC server for which I build an
-          <a href="https://www.electronjs.org">Electron</a> debugger.
+          I have a running gRPC server for which I build a debugger UI in
+          <a href="https://www.electronjs.org">Electron</a>, which runs Node.js.
 
-          I have to invest a lot of effort into making auto generated files work
-          with type system. In this document I present my findings and I
-          implement a workaround rather than a real solution. If you have a
-          better solution please do contact
-          <a href="https://github.com/bausano">me</a>.
+          I had to invest a lot of effort into making my auto generated files
+          work with type system. In this document I present my findings as we
+          implement a workaround for those issues. If you have a better solution
+          please do contact
+          <a href="https://github.com/bausano/bausano.github.io/issues/new">me</a>.
         </p>
 
         <p>
-          It is important to note that I focus NodeJS and this approach will not
-          work if you want to run a gRPC client in a browser. To run it in
+          It is important to note that I focus Node.js and this approach will
+          not work if you want to run a gRPC client in a browser. To run it in
           browser, you want to use
           <a href="https://github.com/grpc/grpc-web">grpc-web</a>. I find
           <a href="https://stackoverflow.com/questions/58247650/how-to-use-typescript-protobuf-generated-files-in-a-grpc-angular-application">
             this SO question
-          </a> quite informative for the web.
+          </a> quite informative in this regard.
         </p>
+
+        <pre>
+          $ npm -v
+          6.13.0
+
+          $ node -v
+          v8.10.0
+
+          $ protoc --version
+          libprotoc 3.11.1
+        </pre>
 
         <h3>Dependencies</h3>
 
         <p>
-          I have two production dependencies installed which we install with
-          the following command:
+          There are two production dependencies which we install with the
+          following command:
 
           <pre>
             npm i  --save grpc @grpc/proto-loader
@@ -89,7 +100,7 @@
             <a href="https://www.npmjs.com/package/protoc">
               Protoc binary
             </a>
-            which auto generates the JS files.
+            which auto generates the JS files (I assume).
 
             <pre>
               "protoc": "^1.0.4"
@@ -99,7 +110,7 @@
             <a href="https://www.npmjs.com/package/ts-protoc-gen">
               TS protoc plugin
             </a>
-            which generates the TS type files.
+            which generates the TS type files (I assume).
 
             <pre>
               "ts-protoc-gen": "^0.12.0"
@@ -107,14 +118,46 @@
           </li>
         </ul>
 
+        <p>
+          If you use custom runtime, such as Electron, you'll likely get an
+          error that the gRPC binary module was not installed for current
+          system. This can be fixed by rebuilding you project with an Elector
+          runtime. Don't forget to change the <em>target</em> to your adequate
+          version of Electron.
+
+          <pre>
+            A JavaScript error occurred in the main process
+            Uncaught Exception:
+            Error: Failed to load gRPC binary module because it was not installed for the current system
+            Expected directory: electron-v4.2-linux-x64-glibc
+            Found: [node-v57-linux-x64-glibc]
+            This problem can often be fixed by running "npm rebuild" on the current system
+          </pre>
+
+          <pre>
+            npm rebuild \
+                --runtime=electron \
+                --target=4.2.0 \
+                --disturl=https://atom.io/download/electron \
+                --abi=57
+          </pre>
+
+          This was take from this
+          <a href="https://stackoverflow.com/a/53373117/5093093">
+          SO answer</a>.
+        </p>
+
         <h3>Build file</h3>
 
         <p>
-          I've written a <em>bin/gen_proto.sh</em> script which I run on build
-          that generates the types and message objects. It works with the dev
-          dependencies we've introduced above. It generates the output into a
-          <em>proto</em> directory in the root of the project, which I
-          <em>.gitignore</em>d.
+          I've written a <em>bin/gen_proto.sh</em> script (based on information
+          in the
+          <a href="https://github.com/improbable-eng/ts-protoc-gen#generating-typescript-definitions-for-commonjs-modules-generated-by-protoc">
+            ts-protoc-gen repository</a>)
+          which is ran on build. The script generates the types and message
+          objects and uses the dev dependencies introduced earlier. It generates
+          the output into a <em>proto</em> directory in the root of the project.
+          The proto dir is <em>.gitignore</em>d.
         </p>
 
         <pre>
@@ -151,8 +194,9 @@
 
         <p>
           I couldn't get the types to load properly. What follows is a
-          workaround as I am sure there must be a better way of doing this. On
-          the other hand it is not completely hideous and it works.
+          workaround as I am sure there is a better way of doing this. It is
+          based on importing the generated types and then extending the
+          <em>grpc</em> library with them.
         </p>
 
         <pre>
@@ -242,10 +286,10 @@
       </pre>
 
       <p>
-        I'd also recommend having a reexport of the message types in a file in
-        the source directory. In the file where we declare the extension to
-        the grpc service, let's say <em>grpcExt.ts</em> we can contain all paths
-        to the proto folder.
+        I'd also recommend having a reexport of the message types the source
+        directory. In the file where we declare the extension to the grpc
+        service, let's say <em>grpcExt.ts</em>, we can contain all paths to the
+        proto folder.
       </p>
 
       <pre>
@@ -259,7 +303,8 @@
       <pre>
         import { Person } from './grpcExt'
 
-        // Assume that there's a message Person with name property.
+        // Assume that there's a message Person with name property in MyService
+        // proto file.
         const person: Person = new Person()
         person.setName('Katja')
 
